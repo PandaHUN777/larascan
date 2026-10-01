@@ -144,6 +144,18 @@ class StatsCommandTest extends TestCase
         $this->assertStringContainsString('Do not combine --json with --format', Artisan::output());
     }
 
+    public function test_it_rejects_conflicting_used_and_unused_options(): void
+    {
+        $exitCode = Artisan::call(StatsCommand::COMMAND_NAME, [
+            'path' => $this->workbenchPath(),
+            '--used' => true,
+            '--unused' => true,
+        ]);
+
+        $this->assertSame(1, $exitCode);
+        $this->assertStringContainsString('Do not combine --used with --unused', Artisan::output());
+    }
+
     public function test_it_rejects_an_unsupported_report_format(): void
     {
         $exitCode = Artisan::call(StatsCommand::COMMAND_NAME, [
@@ -153,5 +165,88 @@ class StatsCommandTest extends TestCase
 
         $this->assertSame(1, $exitCode);
         $this->assertStringContainsString('Unsupported report format', Artisan::output());
+    }
+
+    public function test_it_executes_artisan_command_with_explicit_table_format(): void
+    {
+        $exitCode = Artisan::call(StatsCommand::COMMAND_NAME, [
+            'path' => $this->workbenchPath(),
+            '--format' => 'table',
+        ]);
+
+        $this->assertSame(0, $exitCode);
+        $output = Artisan::output();
+        $this->assertStringContainsString('LARASCAN', $output);
+        $this->assertStringContainsString('USED LARAVEL CAPABILITIES', $output);
+    }
+
+    public function test_it_filters_markdown_output_with_used_option(): void
+    {
+        $exitCode = Artisan::call(StatsCommand::COMMAND_NAME, [
+            'path' => $this->workbenchPath(),
+            '--format' => 'markdown',
+            '--used' => true,
+        ]);
+
+        $this->assertSame(0, $exitCode);
+        $output = Artisan::output();
+        $this->assertStringContainsString('## Used capabilities', $output);
+        $this->assertStringNotContainsString('## Unused capabilities', $output);
+    }
+
+    public function test_it_filters_html_output_with_unused_option(): void
+    {
+        $exitCode = Artisan::call(StatsCommand::COMMAND_NAME, [
+            'path' => $this->workbenchPath(),
+            '--format' => 'html',
+            '--unused' => true,
+        ]);
+
+        $this->assertSame(0, $exitCode);
+        $output = Artisan::output();
+        $this->assertStringContainsString('Unused capabilities', $output);
+        $this->assertStringNotContainsString('Used capabilities', $output);
+    }
+
+    public function test_markdown_formatter_formats_symbols_as_code_spans_and_preserves_quotes_in_errors(): void
+    {
+        $result = new InventoryResult(
+            ['example' => [
+                'name' => '__call',
+                'type' => 'Helper',
+                'count' => 2,
+                'files' => 1,
+            ]],
+            1,
+            'app',
+            '13.x',
+            [['file' => 'app/Broken.php', 'error' => "Can't parse token ';', expecting ')'"]]
+        );
+
+        $output = MarkdownFormatter::format($result);
+
+        $this->assertStringContainsString('| `__call` | Helper | 2 | 1 |', $output);
+        $this->assertStringContainsString('| `app/Broken.php` | Can\'t parse token \';\', expecting \')\' |', $output);
+        $this->assertStringNotContainsString('&\#039;', $output);
+        $this->assertStringNotContainsString('&#039;', $output);
+        $this->assertStringNotContainsString('\_\_call', $output);
+    }
+
+    public function test_markdown_formatter_handles_empty_items_and_total_capabilities(): void
+    {
+        $result = new InventoryResult([], 0, 'empty');
+        $output = MarkdownFormatter::format($result);
+
+        $this->assertStringContainsString('- Total capabilities: 0', $output);
+        $this->assertStringContainsString('| None | | | |', $output);
+    }
+
+    public function test_html_formatter_handles_empty_items(): void
+    {
+        $result = new InventoryResult([], 0, 'empty');
+        $output = HtmlFormatter::format($result);
+
+        $this->assertStringContainsString('<p>None</p>', $output);
+        $this->assertStringContainsString('Total capabilities</dt><dd>0</dd>', $output);
     }
 }

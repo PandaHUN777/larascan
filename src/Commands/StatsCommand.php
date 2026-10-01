@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Larascan\Commands;
 
 use Illuminate\Console\Command;
+use Larascan\Engine\InventoryResult;
 use Larascan\Engine\InventoryScanner;
 use Larascan\Support\HtmlFormatter;
 use Larascan\Support\MarkdownFormatter;
 use Larascan\Support\PathResolver;
+use Larascan\Support\ReportFormat;
 use Larascan\Support\TermwindFormatter;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
@@ -86,6 +88,13 @@ class StatsCommand extends Command
 
         $usedOnly = (bool) $this->option('used');
         $unusedOnly = (bool) $this->option('unused');
+
+        if ($usedOnly && $unusedOnly) {
+            $this->error('Do not combine --used with --unused.');
+
+            return Command::FAILURE;
+        }
+
         $formatOption = $this->option('format');
 
         if ($this->option('json') && $formatOption !== null) {
@@ -94,18 +103,13 @@ class StatsCommand extends Command
             return Command::FAILURE;
         }
 
-        $format = strtolower((string) ($formatOption ?? 'table'));
-        if ($this->option('json')) {
-            $format = 'json';
-        }
-        if ($format === 'md') {
-            $format = 'markdown';
-        }
+        $rawFormat = $this->option('json') ? 'json' : (string) ($formatOption ?? 'table');
+        $format = ReportFormat::tryFromAlias($rawFormat);
 
-        if (! in_array($format, ['table', 'json', 'markdown', 'html'], true)) {
+        if ($format === null) {
             $this->error(sprintf(
                 'Unsupported report format "%s". Choose table, json, markdown, or html.',
-                $format
+                $rawFormat
             ));
 
             return Command::FAILURE;
@@ -114,19 +118,21 @@ class StatsCommand extends Command
         $activeScanner = $scanner ?? $this->scanner ?? $this->resolveScanner();
         $result = $activeScanner->scan($path, $skipTests);
 
-        if ($format === 'json') {
-            $this->output->writeln(json_encode($result->toArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
-        } elseif ($format === 'markdown') {
-            $this->output->writeln(MarkdownFormatter::format($result, usedOnly: $usedOnly, unusedOnly: $unusedOnly));
-        } elseif ($format === 'html') {
-            $this->output->writeln(HtmlFormatter::format($result, usedOnly: $usedOnly, unusedOnly: $unusedOnly));
-        } else {
-            $formatter = new TermwindFormatter($this->output);
-            $formatter->renderHeader();
-            $formatter->renderResult($result, usedOnly: $usedOnly, unusedOnly: $unusedOnly);
-        }
+        match ($format) {
+            ReportFormat::Json => $this->output->writeln(json_encode($result->toArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)),
+            ReportFormat::Markdown => $this->output->writeln(MarkdownFormatter::format($result, usedOnly: $usedOnly, unusedOnly: $unusedOnly)),
+            ReportFormat::Html => $this->output->writeln(HtmlFormatter::format($result, usedOnly: $usedOnly, unusedOnly: $unusedOnly)),
+            ReportFormat::Table => $this->renderTableOutput($result, usedOnly: $usedOnly, unusedOnly: $unusedOnly),
+        };
 
         return Command::SUCCESS;
+    }
+
+    private function renderTableOutput(InventoryResult $result, bool $usedOnly, bool $unusedOnly): void
+    {
+        $formatter = new TermwindFormatter($this->output);
+        $formatter->renderHeader();
+        $formatter->renderResult($result, usedOnly: $usedOnly, unusedOnly: $unusedOnly);
     }
 
     private function resolvePath(): string

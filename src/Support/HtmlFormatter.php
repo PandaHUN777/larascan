@@ -8,6 +8,10 @@ use Larascan\Engine\InventoryResult;
 
 final class HtmlFormatter
 {
+    private function __construct()
+    {
+    }
+
     public static function format(InventoryResult $result, bool $usedOnly = false, bool $unusedOnly = false): string
     {
         $rate = number_format($result->getAdoptionRate(), 1, '.', '');

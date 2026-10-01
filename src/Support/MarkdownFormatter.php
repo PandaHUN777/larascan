@@ -8,6 +8,10 @@ use Larascan\Engine\InventoryResult;
 
 final class MarkdownFormatter
 {
+    private function __construct()
+    {
+    }
+
     public static function format(InventoryResult $result, bool $usedOnly = false, bool $unusedOnly = false): string
     {
         $lines = [
@@ -16,6 +20,7 @@ final class MarkdownFormatter
             '- Laravel version: ' . self::codeSpan($result->getLaravelVersion()),
             '- Scan path: ' . self::codeSpan($result->getScannedPath()),
             '- Files scanned: ' . $result->getScannedFilesCount(),
+            '- Total capabilities: ' . $result->getTotalTrackedCount(),
             sprintf(
                 '- Adoption rate: **%.1f%%** (%d used / %d unused)',
                 $result->getAdoptionRate(),
@@ -40,7 +45,7 @@ final class MarkdownFormatter
             $lines[] = '| --- | --- |';
 
             foreach ($result->getParseErrors() as $error) {
-                $lines[] = '| ' . self::tableCell($error['file']) . ' | ' . self::tableCell($error['error']) . ' |';
+                $lines[] = '| ' . self::codeSpan($error['file']) . ' | ' . self::tableCell($error['error']) . ' |';
             }
 
             $lines[] = '';
@@ -70,7 +75,7 @@ final class MarkdownFormatter
         foreach ($items as $item) {
             $lines[] = sprintf(
                 '| %s | %s | %d | %d |',
-                self::tableCell($item['name']),
+                self::codeSpan($item['name']),
                 self::tableCell($item['type']),
                 $item['count'],
                 $item['files']
@@ -83,27 +88,12 @@ final class MarkdownFormatter
     private static function tableCell(string $value): string
     {
         $value = preg_replace('/[\r\n]+/', ' ', $value) ?? $value;
-        $value = htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
-        return strtr($value, [
-            '\\' => '\\\\',
-            '`' => '\\`',
-            '*' => '\\*',
-            '_' => '\\_',
-            '{' => '\\{',
-            '}' => '\\}',
-            '[' => '\\[',
-            ']' => '\\]',
-            '(' => '\\(',
-            ')' => '\\)',
-            '#' => '\\#',
-            '+' => '\\+',
-            '-' => '\\-',
-            '.' => '\\.',
-            '!' => '\\!',
-            '|' => '\\|',
-            '>' => '\\>',
-        ]);
+        return str_replace(
+            ['&', '<', '>', '|'],
+            ['&amp;', '&lt;', '&gt;', '\|'],
+            $value
+        );
     }
 
     private static function codeSpan(string $value): string
