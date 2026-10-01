@@ -1,0 +1,17 @@
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": [
+      "P8.4 - L11.*",
+      "P8.4 - L12.*",
+      "P8.4 - L13.*"
+    ]
+  },
+  "enforce_admins": false,
+  "required_pull_request_reviews": {
+    "dismiss_stale_reviews": true,
+    "require_code_owner_reviews": false,
+    "required_approving_review_count": 1
+  },
+  "restrictions": null
+}

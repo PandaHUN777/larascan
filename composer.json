@@ -1,0 +1,82 @@
+{
+    "name": "larascan/larascan",
+    "description": "Measure and analyze your Laravel 13 Core native adoption rate, discover used & unused facades, utilities, and helpers.",
+    "keywords": [
+        "laravel",
+        "laravel13",
+        "adoption",
+        "inventory",
+        "php8",
+        "static-analysis",
+        "ast",
+        "termwind",
+        "metrics"
+    ],
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Emre Balasar",
+            "email": "mrbalasare@gmail.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.4",
+        "nikic/php-parser": "^5.0",
+        "nunomaduro/termwind": "^2.0",
+        "symfony/console": "^7.0",
+        "symfony/finder": "^7.0",
+        "illuminate/support": "^11.0|^12.0|^13.0",
+        "illuminate/console": "^11.0|^12.0|^13.0"
+    },
+    "require-dev": {
+        "pestphp/pest": "^3.0",
+        "orchestra/testbench": "^9.0|^10.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Larascan\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Larascan\\Tests\\": "tests/",
+            "Workbench\\App\\": "workbench/app/",
+            "Workbench\\Database\\Factories\\": "workbench/database/factories/",
+            "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
+        }
+    },
+    "bin": [
+        "bin/larascan"
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Larascan\\LarascanServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "scripts": {
+        "test": "pest",
+        "post-autoload-dump": [
+            "@clear",
+            "@prepare"
+        ],
+        "clear": "@php vendor/bin/testbench package:purge-skeleton --ansi",
+        "prepare": "@php vendor/bin/testbench package:discover --ansi",
+        "build": "@php vendor/bin/testbench workbench:build --ansi",
+        "serve": [
+            "Composer\\Config::disableProcessTimeout",
+            "@build",
+            "@php vendor/bin/testbench serve --ansi"
+        ]
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

@@ -1,0 +1,49 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+// Locate autoloader safely before any polyfills are loaded
+$autoloader = null;
+foreach ([
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/../../../autoload.php',
+] as $file) {
+    if (file_exists($file)) {
+        $autoloader = $file;
+        break;
+    }
+}
+
+if ($autoloader === null) {
+    fwrite(STDERR, "Unable to find composer autoloader. Please run 'composer install'.\n");
+    exit(1);
+}
+
+require_once $autoloader;
+
+use Illuminate\Foundation\Application as LaravelApplication;
+use Larascan\Commands\StatsCommand;
+use Larascan\Support\PathResolver;
+use Symfony\Component\Console\Application;
+
+$application = new Application('Larascan - Laravel 13 Native Adoption & Inventory Engine', '1.0.0-alpha.1');
+
+$container = class_exists(LaravelApplication::class)
+    ? new LaravelApplication(PathResolver::basePath())
+    : new class extends \Illuminate\Container\Container {
+        public function runningUnitTests(): bool
+        {
+            return false;
+        }
+    };
+
+$statsCommand = new StatsCommand();
+$statsCommand->setLaravel($container);
+$statsCommand->setName('analyze');
+$statsCommand->setAliases(StatsCommand::aliasesExcept('analyze'));
+
+$application->add($statsCommand);
+$application->setDefaultCommand('analyze', true);
+
+$application->run();
