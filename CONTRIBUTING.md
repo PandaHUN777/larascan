@@ -12,7 +12,7 @@ Everything is dynamically discovered directly from Laravel Core (`vendor/laravel
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/emreyba/larascan.git
+git clone https://github.com/emrebalasar/larascan.git
 cd larascan
 ```
 

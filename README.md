@@ -1,9 +1,14 @@
+<p align="center">
+  <img src="art/social-preview.png" alt="Larascan - Laravel Core Native Adoption & Inventory Engine" width="100%">
+</p>
+
 # Larascan
 
 **Laravel Core Native Adoption & Inventory Engine**
 
 Measure how much of native Laravel your team is actually utilizing. Uncover used and unused capabilities efficiently.
 
+[![Tests](https://github.com/emrebalasar/larascan/actions/workflows/run-tests.yml/badge.svg)](https://github.com/emrebalasar/larascan/actions/workflows/run-tests.yml)
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/larascan/larascan.svg?style=flat-square)](https://packagist.org/packages/larascan/larascan)
 [![Total Downloads](https://img.shields.io/packagist/dt/larascan/larascan.svg?style=flat-square)](https://packagist.org/packages/larascan/larascan)
 [![Software License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
