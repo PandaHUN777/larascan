@@ -6,6 +6,8 @@ namespace Larascan\Commands;
 
 use Illuminate\Console\Command;
 use Larascan\Engine\InventoryScanner;
+use Larascan\Support\HtmlFormatter;
+use Larascan\Support\MarkdownFormatter;
 use Larascan\Support\PathResolver;
 use Larascan\Support\TermwindFormatter;
 use Symfony\Component\Console\Input\InputArgument;
@@ -63,7 +65,18 @@ class StatsCommand extends Command
         $this->addOption('no-skip-tests', null, InputOption::VALUE_NONE, 'Do not skip tests directory');
         $this->addOption('used', null, InputOption::VALUE_NONE, 'Show only used Laravel 13 features');
         $this->addOption('unused', null, InputOption::VALUE_NONE, 'Show only unused Laravel 13 features');
-        $this->addOption('json', null, InputOption::VALUE_NONE, 'Output result in JSON format');
+        $this->addOption(
+            'json',
+            null,
+            InputOption::VALUE_NONE,
+            'Output result in JSON format (legacy alias for --format=json)'
+        );
+        $this->addOption(
+            'format',
+            null,
+            InputOption::VALUE_REQUIRED,
+            'Report format: table, json, markdown (md), or html'
+        );
     }
 
     public function handle(?InventoryScanner $scanner = null): int
@@ -73,16 +86,42 @@ class StatsCommand extends Command
 
         $usedOnly = (bool) $this->option('used');
         $unusedOnly = (bool) $this->option('unused');
-        $asJson = (bool) $this->option('json');
+        $formatOption = $this->option('format');
+
+        if ($this->option('json') && $formatOption !== null) {
+            $this->error('Do not combine --json with --format.');
+
+            return Command::FAILURE;
+        }
+
+        $format = strtolower((string) ($formatOption ?? 'table'));
+        if ($this->option('json')) {
+            $format = 'json';
+        }
+        if ($format === 'md') {
+            $format = 'markdown';
+        }
+
+        if (! in_array($format, ['table', 'json', 'markdown', 'html'], true)) {
+            $this->error(sprintf(
+                'Unsupported report format "%s". Choose table, json, markdown, or html.',
+                $format
+            ));
+
+            return Command::FAILURE;
+        }
 
         $activeScanner = $scanner ?? $this->scanner ?? $this->resolveScanner();
         $result = $activeScanner->scan($path, $skipTests);
 
-        $formatter = new TermwindFormatter($this->output);
-
-        if ($asJson) {
+        if ($format === 'json') {
             $this->output->writeln(json_encode($result->toArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+        } elseif ($format === 'markdown') {
+            $this->output->writeln(MarkdownFormatter::format($result, usedOnly: $usedOnly, unusedOnly: $unusedOnly));
+        } elseif ($format === 'html') {
+            $this->output->writeln(HtmlFormatter::format($result, usedOnly: $usedOnly, unusedOnly: $unusedOnly));
         } else {
+            $formatter = new TermwindFormatter($this->output);
             $formatter->renderHeader();
             $formatter->renderResult($result, usedOnly: $usedOnly, unusedOnly: $unusedOnly);
         }
